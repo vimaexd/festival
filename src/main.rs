@@ -124,10 +124,10 @@ async fn main() {
     .map(|s| {
       format!("{} - {}\nGuitar {}\nDrums {}\nVocals {}\nBass {}", 
       s.artist, s.title, 
-      ascii_bar(s.intensities.guitar.unwrap(), 7),
-      ascii_bar(s.intensities.drums.unwrap(), 7),
-      ascii_bar(s.intensities.vocals.unwrap(), 7),
-      ascii_bar(s.intensities.bass.unwrap(), 7))
+      ascii_bar(s.intensities.guitar.unwrap() + 1, 7),
+      ascii_bar(s.intensities.drums.unwrap() + 1, 7),
+      ascii_bar(s.intensities.vocals.unwrap() + 1, 7),
+      ascii_bar(s.intensities.bass.unwrap() + 1, 7))
     })
     .collect::<Vec<String>>()
     .join("\n\n");
