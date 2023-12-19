@@ -18,11 +18,10 @@ async fn main() {
   dotenv().ok();
   println!("{}", "### fortnite festival setlist ###".bold().bright_purple());
   
-  // do auth
   let mut account: Option<Account> = None;
   let egl = AccountPublicService::new(EGL_CLIENT, EGL_SECRET);
 
-  // try find saved login
+  // try load saved login if it exists
   let save = fs::read_to_string("account.json");
   if save.is_ok() {
     println!("found saved account!");
@@ -35,24 +34,26 @@ async fn main() {
         println!("couldnt resolve saved account!")
       }
     }
-
   } else if save.is_err() {
     println!("error reading saved account! continuing anyway..")
   }
 
+  // else lets try and fetch a fresh response using an authorization code
   if account.is_none() {
     println!("no saved login found.. trying authorization code");
     let authoriz = std::env::var("AUTHORIZATION_CODE");
+
+    // prompt for info on how to grab the authorization code
     if authoriz.as_ref().is_err() || authoriz.as_ref().unwrap() == "" {
       println!("couldnt get authorization code from .env!");
       println!(
-        "please login to epic games in a browser and paste your authorization code from this url: {}", 
+        "please login to epic games in a browser and paste your authorization code from this url into the .env file: {}", 
         egl.get_redirect_url()
       );
       return;
     }
 
-    // try login
+    // try to login
     println!("trying login..");
     let code = authoriz.unwrap();
     let _acct = egl.login_to_account(
@@ -71,15 +72,14 @@ async fn main() {
     // serialize account
     fs::write("./account.json", serde_json::to_string(account.as_ref().unwrap()).unwrap())
       .expect("error saving account to file!");
-  } else {
   }
 
+  // we've def got an account now now so we can safely unwrap
   let a = account.unwrap();
   println!("logged in as {}", a.display_name);
 
+  // yes, there are at least 3 fucking authentication requests required for this
   let exch = egl.request_exchange_code(&a).await.unwrap();
-  
-
   let fort = AccountPublicService::new(FORT_CLIENT, FORT_SECRET);
   let fortacc = fort.login_to_account("exchange_code".to_string(), Some(&exch.code))
     .await
@@ -120,6 +120,7 @@ async fn main() {
     }
   }
 
+  // format tracks into strings to be appended to the post
   let formatted_songs = pilgrim_songs.iter()
     .map(|s| {
       format!("{} - {}\nGuitar {}\nDrums {}\nVocals {}\nBass {}", 
@@ -135,12 +136,14 @@ async fn main() {
 
   let post = format!("{}", formatted_songs);
 
+  // set cw + visibility
   let post_params = PostStatusInputOptions {
     visibility: Some(megalodon::entities::StatusVisibility::Unlisted),
     spoiler_text: Some(format!("Fortnite Festival Setlist for {}", chrono::Utc::now().format("%d/%m/%Y"))),
     ..Default::default()
   };
 
+  // post the dang thing
   match fediverse.post_status(post, Some(&post_params)).await {
     Ok(_) => { println!("posted status!")}
     Err(e) => { println!("error posting status! {e}")}

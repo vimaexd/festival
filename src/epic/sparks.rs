@@ -107,7 +107,6 @@ pub struct SparkTrack {
   pub tags: Option<Vec<String>>, // ?
 }
 
-// pub async fn get_spark_tracks() -> Result<HashMap<String, &str>, String> {
 pub async fn get_spark_tracks() -> Result<SparkTracksMap, String> {
   let _resp = reqwest::get(SPARKS_TRACKS_ENDPOINT)
     .await;
