@@ -12,6 +12,7 @@ use epic::sparks::SparkTrack;
 use epic::auth::{AccountPublicService, Account};
 use epic::calendar;
 use megalodon::megalodon::PostStatusInputOptions;
+use megalodon::entities::StatusVisibility;
 
 #[tokio::main]
 async fn main() {
@@ -70,8 +71,8 @@ async fn main() {
     };
 
     // serialize account
-    fs::write("./account.json", serde_json::to_string(account.as_ref().unwrap()).unwrap())
-      .expect("error saving account to file!");
+    account.as_ref().unwrap().save_to_disk("./account.json")
+      .expect("couldnt save account to disk!");
   }
 
   // we've def got an account now now so we can safely unwrap
@@ -134,11 +135,26 @@ async fn main() {
     .join("\n\n");
     
 
-  let post = format!("{}", formatted_songs);
+  let mut post = format!("{}", formatted_songs);
+  
+  if pilgrim_songs.len() < 1 {
+    post = "No songs in the setlist right now.".to_string();
+  }
 
   // set cw + visibility
+  let mut visibility = StatusVisibility::Unlisted;
+  let visibility_raw = std::env::var("VISIBILITY");
+  
+  if visibility_raw.is_ok() {
+    match visibility_raw.unwrap().as_str() {
+      "unlisted" => visibility = StatusVisibility::Unlisted,
+      "dm" => visibility = StatusVisibility::Direct,
+      &_ => ()
+    }
+  }
+
   let post_params = PostStatusInputOptions {
-    visibility: Some(megalodon::entities::StatusVisibility::Unlisted),
+    visibility: Some(visibility),
     spoiler_text: Some(format!("Fortnite Festival Setlist for {}", chrono::Utc::now().format("%d/%m/%Y"))),
     ..Default::default()
   };

@@ -1,6 +1,7 @@
 use reqwest;
 use serde::{Deserialize, Serialize};
 use chrono::DateTime;
+use std::{fs, io::Error};
 
 use super::super::constants::{
   APS_ENDPOINT,
@@ -48,6 +49,9 @@ impl Account {
       match refreshed_acct {
         Ok(v) => { 
           println!("refreshed!"); 
+          
+          v.save_to_disk("./account.json")
+            .expect("couldnt save account to disk!");
           return Some(v); 
         },
         Err(e) => println!("couldn't refresh auth! {}", e)
@@ -68,6 +72,14 @@ impl Account {
     }
 
     return None
+  }
+
+  pub fn save_to_disk(&self, path: &str) -> Result<bool, Error> {
+    let serialized = serde_json::to_string(&self).unwrap();
+    match fs::write(path, serialized) {
+      Ok(_) => return Ok(true),
+      Err(e) => return Err(e)
+    }
   }
 }
 
@@ -117,15 +129,14 @@ impl AccountPublicService {
       .form(&params)
       .basic_auth(self.client_id, Some(self.client_secret))
       .send()
-      .await;
+      .await?;
     
-    let resp = match _resp {
+    let resp = match _resp.error_for_status() {
       Ok(v) => v,
       Err(e) => return Err(e),
     };
 
     let acc = resp
-      .error_for_status().unwrap()
       .json::<Account>().await
       .expect("error parsing aps response!");
     return Ok(acc);
